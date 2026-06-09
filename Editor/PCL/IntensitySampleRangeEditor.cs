@@ -18,7 +18,10 @@
 
 
 using AutoCore.MapToolbox.PCL;
+using System.IO;
+using System.Linq;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace AutoCore.MapToolbox.Editor.PCL
@@ -34,12 +37,26 @@ namespace AutoCore.MapToolbox.Editor.PCL
         public override void OnGUI(string searchContext)
         {
             base.OnGUI(searchContext);
+            var newMin = min;
+            var newMax = max;
             EditorGUILayout.BeginHorizontal();
-            EditorGUILayout.MinMaxSlider("Intensity range to color", ref min, ref max, 0, 100);
-            EditorGUILayout.LabelField($"    {min:f3}%-{max:f3}%");
+            EditorGUILayout.MinMaxSlider("Intensity range to color", ref newMin, ref newMax, 0, 100);
+            EditorGUILayout.LabelField($"    {newMin:f3}%-{newMax:f3}%");
             EditorGUILayout.EndHorizontal();
-            EditorGUILayout.FloatField("Default width", width);
-            EditorGUILayout.FloatField("Default speed Limit", speed_limit);
+            if (newMin != min || newMax != max)
+            {
+                min = newMin;
+                max = newMax;
+                SaveSettings();
+            }
+            width = EditorGUILayout.FloatField("Default width", width);
+            speed_limit = EditorGUILayout.FloatField("Default speed Limit", speed_limit);
+            EditorGUILayout.HelpBox("After changing intensity range, click \"Reimport All PCD Files\" then re-add the .pcd asset to the scene. Check Unity Console for debug logs.", MessageType.Info);
+            if (GUILayout.Button("Reimport All PCD Files"))
+            {
+                SaveSettings();
+                EditorApplication.delayCall += ReimportAllPcd;
+            }
         }
         public override void OnActivate(string searchContext, VisualElement rootElement)
         {
@@ -52,10 +69,27 @@ namespace AutoCore.MapToolbox.Editor.PCL
         public override void OnDeactivate()
         {
             base.OnDeactivate();
+            SaveSettings();
+        }
+        void SaveSettings()
+        {
             Externs.IntensityPrecentMin = min;
             Externs.IntensityPrecentMax = max;
             Externs.DefaultWidth = width;
             Externs.DefaultSpeedLimit = speed_limit;
+            PlayerPrefs.Save();
+        }
+        static void ReimportAllPcd()
+        {
+            var assetsPath = Application.dataPath.TrimEnd('/', '\\');
+            var pcdFiles = Directory.GetFiles(assetsPath, "*.pcd", SearchOption.AllDirectories);
+            Debug.Log($"[MapToolbox] Reimporting {pcdFiles.Length} .pcd files with IntensityPrecentMin={Externs.IntensityPrecentMin}, IntensityPrecentMax={Externs.IntensityPrecentMax}");
+            foreach (var file in pcdFiles)
+            {
+                var assetPath = "Assets" + file.Substring(assetsPath.Length).Replace('\\', '/');
+                AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
+                Debug.Log($"[MapToolbox] Reimported: {assetPath}");
+            }
         }
     }
 }

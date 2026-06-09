@@ -99,7 +99,7 @@ namespace AutoCore.MapToolbox.PCL
                 {
                     do
                     {
-                        if(point.y > 200)
+                        if(point.y > 1)
                         {
                             height = math.min(height, point.y);
                         }

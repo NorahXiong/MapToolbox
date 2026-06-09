@@ -45,7 +45,7 @@ namespace AutoCore.MapToolbox.PCL
         {
             get
             {
-                return PlayerPrefs.GetFloat(Const.IntensityPrecentMax, 30);
+                return PlayerPrefs.GetFloat(Const.IntensityPrecentMax, 100);
             }
             set
             {
@@ -105,6 +105,23 @@ namespace AutoCore.MapToolbox.PCL
             return points;
         }
         [BurstCompile]
+        struct JobNormalizeY : IJobParallelFor
+        {
+            internal NativeArray<PointXYZRGBA> points;
+            [ReadOnly] internal float y_min;
+            public void Execute(int index)
+            {
+                var temp = points[index];
+                points[index] = new PointXYZRGBA { xyz = new Vector3(temp.xyz.x, temp.xyz.y - y_min, temp.xyz.z), bgra = temp.bgra };
+            }
+        }
+        public static NativeArray<PointXYZRGBA> NormalizeY(this NativeArray<PointXYZRGBA> points)
+        {
+            points.Reinterpret<float4>().GetMinMax(out float4 min, out float4 max);
+            new JobNormalizeY { points = points, y_min = min.y }.Schedule(points.Length, 1024).Complete();
+            return points;
+        }
+        [BurstCompile]
         struct JobPointsCell : IJobParallelFor
         {
             [ReadOnly] internal int2 cell;
@@ -130,7 +147,7 @@ namespace AutoCore.MapToolbox.PCL
                     list.Add(enumerator.Current);
                 }
                 var id = (int2)math.floor((((float3)(list[0].xyz)).xz) / cell) * cell;
-                ret.Add(new int3(id.x, -500, id.y), list);
+                ret.Add(new int3(id.x, 0, id.y), list);
             }
             keys.Item1.Dispose();
             hashMap.Dispose();
@@ -198,12 +215,19 @@ namespace AutoCore.MapToolbox.PCL
         {
             points.Reinterpret<float4>().GetMinMax(out float4 min, out float4 max);
             var ret = new NativeArray<PointXYZRGBA>(points.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+            var i_min = min.w + (max.w - min.w) * IntensityPrecentMin / 100f;
+            var i_max = max.w - (max.w - min.w) * (1f - IntensityPrecentMax / 100f);
+            if (i_max <= i_min)
+            {
+                i_max = i_min + 1f;
+            }
+            Debug.Log($"[MapToolbox] IntensityToColor: data range=[{min.w:F3}, {max.w:F3}], percentMin={IntensityPrecentMin}, percentMax={IntensityPrecentMax}, i_min={i_min:F3}, i_max={i_max:F3}");
             new JobIntensityToColor
             {
                 points_xyzi = points,
                 points_xyzrgba = ret,
-                intensity_min = min.w + (max.w - min.w) * IntensityPrecentMin / 100,
-                intensity_max = max.w - (max.w - min.w) * (1 - IntensityPrecentMax / 100)
+                intensity_min = i_min,
+                intensity_max = i_max
             }.Schedule(points.Length, 1024).Complete();
             return ret;
         }

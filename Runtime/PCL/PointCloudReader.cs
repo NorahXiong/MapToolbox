@@ -89,56 +89,7 @@ namespace AutoCore.MapToolbox.PCL
                             {
                                 if (contains_xyz())
                                 {
-                                    if (contains_rgb() || contains_rgba())
-                                    {
-                                        size = load_as_xyzrgba(out IntPtr data_xyzrgb);
-                                        if (size > (ulong)(int.MaxValue / sizeof(PointXYZRGBA)))
-                                        {
-                                            Debug.LogError($"load failed as breached max points amount {int.MaxValue / sizeof(PointXYZRGBA)} , this file have {size} points ‬!");
-                                        }
-                                        else if (size > (ulong)(int.MaxValue / sizeof(PCLPointXYZRGBA)))
-                                        {
-                                            var origin = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<PCLPointXYZRGBA>(data_xyzrgb.ToPointer(), int.MaxValue / sizeof(PCLPointXYZRGBA), Allocator.None);
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-                                            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref origin, AtomicSafetyHandle.GetTempMemoryHandle());
-#endif
-                                            var temp_1 = new NativeArray<PCLPointXYZRGBA>(origin, Allocator.TempJob);
-                                            int remain = (int)size - temp_1.Length;
-                                            origin = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<PCLPointXYZRGBA>(IntPtr.Add(data_xyzrgb, remain * 32).ToPointer(), remain, Allocator.None);
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-                                            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref origin, AtomicSafetyHandle.GetTempMemoryHandle());
-#endif
-                                            var temp_2 = new NativeArray<PCLPointXYZRGBA>(origin, Allocator.TempJob);
-                                            clear();
-                                            var densed_1 = Dense(temp_1);
-                                            temp_1.Dispose();
-                                            var densed_2 = Dense(temp_2);
-                                            temp_2.Dispose();
-                                            PointXYZRGBAs = new NativeArray<PointXYZRGBA>((int)size, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
-                                            NativeArray<PointXYZRGBA>.Copy(densed_1, PointXYZRGBAs, densed_1.Length);
-                                            NativeArray<PointXYZRGBA>.Copy(densed_2, 0, PointXYZRGBAs, densed_1.Length, densed_2.Length);
-                                            densed_1.Dispose();
-                                            densed_2.Dispose();
-                                            return true;
-                                        }
-                                        else if (size > 0)
-                                        {
-                                            var origin = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<PCLPointXYZRGBA>(data_xyzrgb.ToPointer(), (int)size, Allocator.None);
-#if ENABLE_UNITY_COLLECTIONS_CHECKS
-                                            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref origin, AtomicSafetyHandle.GetTempMemoryHandle());
-#endif
-                                            var temp = new NativeArray<PCLPointXYZRGBA>(origin, Allocator.TempJob);
-                                            clear();
-                                            PointXYZRGBAs = Dense(temp);
-                                            temp.Dispose();
-                                            return true;
-                                        }
-                                        else
-                                        {
-                                            Debug.LogError("load failed as points count zero !");
-                                        }
-                                    }
-                                    else if (contains_i())
+                                    if (contains_i())
                                     {
                                         size = load_as_xyzi(out IntPtr data_xyzi);
                                         if (size > (ulong)(int.MaxValue / sizeof(PointXYZI)))
@@ -187,12 +138,61 @@ namespace AutoCore.MapToolbox.PCL
                                             Debug.LogError("load failed as points count zero !");
                                         }
                                     }
-                                    else
+                                    else if (contains_rgb() || contains_rgba())
                                     {
-                                        size = load_as_xyz(out IntPtr data_xyz);
+                                        size = load_as_xyzrgba(out IntPtr data_xyzrgb);
                                         if (size > (ulong)(int.MaxValue / sizeof(PointXYZRGBA)))
                                         {
                                             Debug.LogError($"load failed as breached max points amount {int.MaxValue / sizeof(PointXYZRGBA)} , this file have {size} points ‬!");
+                                        }
+                                        else if (size > (ulong)(int.MaxValue / sizeof(PCLPointXYZRGBA)))
+                                        {
+                                            var origin = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<PCLPointXYZRGBA>(data_xyzrgb.ToPointer(), int.MaxValue / sizeof(PCLPointXYZRGBA), Allocator.None);
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                                            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref origin, AtomicSafetyHandle.GetTempMemoryHandle());
+#endif
+                                            var temp_1 = new NativeArray<PCLPointXYZRGBA>(origin, Allocator.TempJob);
+                                            int remain = (int)size - temp_1.Length;
+                                            origin = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<PCLPointXYZRGBA>(IntPtr.Add(data_xyzrgb, remain * 32).ToPointer(), remain, Allocator.None);
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                                            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref origin, AtomicSafetyHandle.GetTempMemoryHandle());
+#endif
+                                            var temp_2 = new NativeArray<PCLPointXYZRGBA>(origin, Allocator.TempJob);
+                                            clear();
+                                            var densed_1 = Dense(temp_1);
+                                            temp_1.Dispose();
+                                            var densed_2 = Dense(temp_2);
+                                            temp_2.Dispose();
+                                            PointXYZRGBAs = new NativeArray<PointXYZRGBA>((int)size, Allocator.TempJob, NativeArrayOptions.UninitializedMemory);
+                                            NativeArray<PointXYZRGBA>.Copy(densed_1, PointXYZRGBAs, densed_1.Length);
+                                            NativeArray<PointXYZRGBA>.Copy(densed_2, 0, PointXYZRGBAs, densed_1.Length, densed_2.Length);
+                                            densed_1.Dispose();
+                                            densed_2.Dispose();
+                                            return true;
+                                        }
+                                        else if (size > 0)
+                                        {
+                                            var origin = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<PCLPointXYZRGBA>(data_xyzrgb.ToPointer(), (int)size, Allocator.None);
+#if ENABLE_UNITY_COLLECTIONS_CHECKS
+                                            NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref origin, AtomicSafetyHandle.GetTempMemoryHandle());
+#endif
+                                            var temp = new NativeArray<PCLPointXYZRGBA>(origin, Allocator.TempJob);
+                                            clear();
+                                            PointXYZRGBAs = Dense(temp);
+                                            temp.Dispose();
+                                            return true;
+                                        }
+                                        else
+                                        {
+                                            Debug.LogError("load failed as points count zero !");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        size = load_as_xyz(out IntPtr data_xyz);
+                                        if (size > (ulong)(int.MaxValue / sizeof(PointXYZI)))
+                                        {
+                                            Debug.LogError($"load failed as breached max points amount {int.MaxValue / sizeof(PointXYZI)} , this file have {size} points ‬!");
                                         }
                                         else if (size > 0)
                                         {
@@ -202,7 +202,7 @@ namespace AutoCore.MapToolbox.PCL
 #endif
                                             var temp = new NativeArray<PCLPointXYZ>(origin, Allocator.TempJob);
                                             clear();
-                                            PointXYZRGBAs = Dense(temp);
+                                            PointXYZIs = DenseXYZtoXYZI(temp);
                                             temp.Dispose();
                                             return true;
                                         }
@@ -255,6 +255,23 @@ namespace AutoCore.MapToolbox.PCL
             {
                 PointXYZIs.Dispose();
             }
+        }
+        [BurstCompile]
+        struct JobDensePointXYZtoXYZI : IJobParallelFor
+        {
+            [ReadOnly] internal NativeArray<PCLPointXYZ> data_in;
+            [WriteOnly] internal NativeArray<PointXYZI> data_out;
+            public void Execute(int index) => data_out[index] = new PointXYZI { xyz = data_in[index].point.xyz, intensity = data_in[index].point.z };
+        }
+        public NativeArray<PointXYZI> DenseXYZtoXYZI(NativeArray<PCLPointXYZ> raw)
+        {
+            var job = new JobDensePointXYZtoXYZI
+            {
+                data_in = raw,
+                data_out = new NativeArray<PointXYZI>(raw.Length, Allocator.TempJob, NativeArrayOptions.UninitializedMemory)
+            };
+            job.Schedule(raw.Length, ushort.MaxValue).Complete();
+            return job.data_out;
         }
         [BurstCompile]
         struct JobDensePointXYZ : IJobParallelFor

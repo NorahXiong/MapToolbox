@@ -36,12 +36,12 @@ namespace AutoCore.MapToolbox.Editor.PCL
             {
                 if (reader.PointXYZRGBAs.IsCreated)
                 {
-                    SaveMeshes(ctx, reader.PointXYZRGBAs.CoordinateRosToUnity().ToUnityColor().PointsCell(new int2(100)).ToMeshes());
+                    SaveMeshes(ctx, reader.PointXYZRGBAs.CoordinateRosToUnity().ToUnityColor().NormalizeY().PointsCell(new int2(100)).ToMeshes());
                 }
                 else if (reader.PointXYZIs.IsCreated)
                 {
                     var colored = reader.PointXYZIs.IntensityToColor();
-                    SaveMeshes(ctx, colored.CoordinateRosToUnity().PointsCell(new int2(100)).ToMeshes());
+                    SaveMeshes(ctx, colored.CoordinateRosToUnity().NormalizeY().PointsCell(new int2(100)).ToMeshes());
                     colored.Dispose();
                 }
             }

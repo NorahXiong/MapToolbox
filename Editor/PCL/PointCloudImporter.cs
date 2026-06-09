@@ -20,8 +20,8 @@
 using AutoCore.MapToolbox.PCL;
 using System.IO;
 using Unity.Mathematics;
-using UnityEditor.AssetImporters;
 using UnityEditor;
+using UnityEditor.AssetImporters;
 using UnityEngine;
 using System.Collections.Generic;
 

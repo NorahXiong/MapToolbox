@@ -57,7 +57,16 @@ namespace Packages.MapToolbox
             LineRenderer.positionCount = Way.Nodes.Count;
             LineRenderer.SetPositions(Way.Nodes.Select(_ => _.Position).ToArray());
         }
-        private void OnPointsMoved(Node node) => LineRenderer.SetPosition(Way.Nodes.IndexOf(node), node.Position);
+        private void OnPointsMoved(Node node)
+        {
+            for (int i = 0; i < Way.Nodes.Count; i++)
+            {
+                if (Way.Nodes[i].Equals(node))
+                {
+                    LineRenderer.SetPosition(i, node.Position);
+                }
+            }
+        }
         private void OnAddNode(Node node)
         {
             var index = Way.Nodes.IndexOf(node);

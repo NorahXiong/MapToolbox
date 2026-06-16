@@ -73,6 +73,9 @@ namespace Packages.MapToolbox
                             case "traffic_sign":
                                 gameObject.GetComponent<RegulatoryElement>().subType = RegulatoryElement.SubType.traffic_sign;
                                 break;
+                            case "gate":
+                                gameObject.GetComponent<RegulatoryElement>().subType = RegulatoryElement.SubType.gate;
+                                break;
                             case "road":
                                 gameObject.GetComponent<Lanelet>().subType = Lanelet.SubType.road;
                                 break;

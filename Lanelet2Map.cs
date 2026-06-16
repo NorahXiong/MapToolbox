@@ -109,6 +109,7 @@ namespace Packages.MapToolbox
         internal void AddParkingLot() => Selection.activeObject = ParkingLot.AddNew(this);
         internal void AddParkingSpace() => Selection.activeObject = ParkingSpace.AddNew(this);
         internal void AddPedestrianMarking() => Selection.activeObject = PedestrianMarking.AddNew(this);
+        internal void AddGate() => Selection.activeObject = Gate.AddNew(this);
         internal void ReIndex()
         {
             for (int i = 0; i < transform.childCount; i++)
@@ -158,6 +159,10 @@ namespace Packages.MapToolbox
             {
                 (target as Lanelet2Map).AddPedestrianMarking();
             }
+            if (GUILayout.Button("Add Gate"))
+            {
+                (target as Lanelet2Map).AddGate();
+            }
             if (GUILayout.Button("ReIndex Entities"))
             {
                 (target as Lanelet2Map).ReIndex();
@@ -193,6 +198,10 @@ namespace Packages.MapToolbox
             if (GUILayout.Button("Filter PedestrianMarking"))
             {
                 SceneModeUtility.SearchForType(typeof(PedestrianMarking));
+            }
+            if (GUILayout.Button("Filter Gate"))
+            {
+                SceneModeUtility.SearchForType(typeof(Gate));
             }
         }
     }

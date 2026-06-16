@@ -95,6 +95,9 @@ namespace Packages.MapToolbox
                             case "pedestrian_marking":
                                 gameObject.AddComponent<PedestrianMarking>();
                                 break;
+                            case "gate":
+                                gameObject.AddComponent<Gate>();
+                                break;
                             case "":
                                 extermTags.Add(new Tag(tag));
                                 break;
@@ -137,6 +140,11 @@ namespace Packages.MapToolbox
                         if (traffic_light)
                         {
                             traffic_light.height = float.Parse(tag.Attributes["v"].Value);
+                        }
+                        var gate = gameObject.GetComponent<Gate>();
+                        if (gate)
+                        {
+                            gate.height = float.Parse(tag.Attributes["v"].Value);
                         }
                         break;
                     case "width":
@@ -210,6 +218,12 @@ namespace Packages.MapToolbox
                 if (pedestrian_marking)
                 {
                     way.AppendChild(doc.AddTag("type", "pedestrian_marking"));
+                }
+                var gate = GetComponent<Gate>();
+                if (gate)
+                {
+                    way.AppendChild(doc.AddTag("type", "gate"));
+                    way.AppendChild(doc.AddTag("height", gate.height.ToString()));
                 }
                 foreach (var item in extermTags)
                 {
@@ -379,25 +393,44 @@ namespace Packages.MapToolbox
                         }
                     }
                     if (contains_traffic_sign)
-                    {
-                        if (GUILayout.Button("Add traffic sign regulatory element"))
                         {
-                            var stop_line = Targets.Select(_ => _.GetComponent<StopLine>()).Where(_ => _ != null).First();
-                            var re = RegulatoryElement.AddNew(Targets.First().GetComponentInParent<Lanelet2Map>());
-                            re.subType = RegulatoryElement.SubType.traffic_sign;
-                            re.ref_line = Targets.Where(_ => _.GetComponent<StopLine>() != null).First();
-                            re.refers = Targets.Where(_ => _.GetComponent<TrafficSign>() != null).First();
-                            re.Relation.Members.Add(re.ref_line);
-                            re.Relation.Members.Add(re.refers);
-                            var relation = stop_line.GetLanelet();
-                            if (relation)
+                            if (GUILayout.Button("Add traffic sign regulatory element"))
                             {
-                                relation.Relation.Members.Add(re.Relation);
+                                var stop_line = Targets.Select(_ => _.GetComponent<StopLine>()).Where(_ => _ != null).First();
+                                var re = RegulatoryElement.AddNew(Targets.First().GetComponentInParent<Lanelet2Map>());
+                                re.subType = RegulatoryElement.SubType.traffic_sign;
+                                re.ref_line = Targets.Where(_ => _.GetComponent<StopLine>() != null).First();
+                                re.refers = Targets.Where(_ => _.GetComponent<TrafficSign>() != null).First();
+                                re.Relation.Members.Add(re.ref_line);
+                                re.Relation.Members.Add(re.refers);
+                                var relation = stop_line.GetLanelet();
+                                if (relation)
+                                {
+                                    relation.Relation.Members.Add(re.Relation);
+                                }
+                            }
+                        }
+                        bool contains_gate = Targets.Any(_ => _.GetComponent<Gate>() != null);
+                        if (contains_gate)
+                        {
+                            if (GUILayout.Button("Add gate regulatory element"))
+                            {
+                                var stop_line = Targets.Select(_ => _.GetComponent<StopLine>()).Where(_ => _ != null).First();
+                                var re = RegulatoryElement.AddNew(Targets.First().GetComponentInParent<Lanelet2Map>());
+                                re.subType = RegulatoryElement.SubType.gate;
+                                re.ref_line = Targets.Where(_ => _.GetComponent<StopLine>() != null).First();
+                                re.refers = Targets.Where(_ => _.GetComponent<Gate>() != null).First();
+                                re.Relation.Members.Add(re.ref_line);
+                                re.Relation.Members.Add(re.refers);
+                                var relation = stop_line.GetLanelet();
+                                if (relation)
+                                {
+                                    relation.Relation.Members.Add(re.Relation);
+                                }
                             }
                         }
                     }
                 }
-            }
             else
             {
                 if (GUILayout.Button("Remove Duplicated Nodes"))

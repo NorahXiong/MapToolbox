@@ -32,7 +32,8 @@ namespace Packages.MapToolbox
             road,
             crosswalk,
             traffic_light,
-            traffic_sign
+            traffic_sign,
+            gate
         }
         public SubType subType;
         public Relation Relation => GetComponent<Relation>() ?? gameObject.AddComponent<Relation>();

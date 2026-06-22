@@ -68,6 +68,7 @@ namespace Packages.MapToolbox
         public LineThin right;
         public float width;
         public float speed_limit;
+        public bool loop = false;
         public enum TurnDirection
         {
             Null,
@@ -89,15 +90,18 @@ namespace Packages.MapToolbox
         }
         private void RemovePoints()
         {
+            OpenLoop();
             if (CenterPoints.Count > 0)
             {
                 CenterPoints.RemoveAt(CenterPoints.Count - 1);
             }
             left.RemovePointFinal();
             right.RemovePointFinal();
+            CloseLoop();
         }
         private void AddPoints()
         {
+            OpenLoop();
             var centerPoint = Utils.MousePointInSceneView;
             centerPoint.y = Utils.GetHeight(centerPoint);
             if (CenterPoints.Count > 1)
@@ -121,6 +125,37 @@ namespace Packages.MapToolbox
                 right.AddNextPoint(rightPoint1);
             }
             CenterPoints.Add(centerPoint);
+            CloseLoop();
+        }
+        private void OpenLoop()
+        {
+            if (loop)
+            {
+                RemoveClosingNode(left.Way.Nodes);
+                RemoveClosingNode(right.Way.Nodes);
+                left.UpdateRenderer();
+                right.UpdateRenderer();
+            }
+        }
+        private void CloseLoop()
+        {
+            if (loop)
+            {
+                AddClosingNode(left.Way.Nodes);
+                AddClosingNode(right.Way.Nodes);
+                left.UpdateRenderer();
+                right.UpdateRenderer();
+            }
+        }
+        private static void RemoveClosingNode(List<Node> nodes)
+        {
+            if (nodes.Count > 2 && nodes.First().Equals(nodes.Last()))
+                nodes.RemoveAt(nodes.Count - 1);
+        }
+        private static void AddClosingNode(List<Node> nodes)
+        {
+            if (nodes.Count > 2 && !nodes.First().Equals(nodes.Last()))
+                nodes.Add(nodes.First());
         }
         internal void OnEditorEnable()
         {
@@ -360,6 +395,23 @@ namespace Packages.MapToolbox
             right = left;
             left = tmp;
         }
+        internal void ToggleLoop()
+        {
+            loop = !loop;
+            if (loop)
+            {
+                AddClosingNode(left.Way.Nodes);
+                AddClosingNode(right.Way.Nodes);
+            }
+            else
+            {
+                RemoveClosingNode(left.Way.Nodes);
+                RemoveClosingNode(right.Way.Nodes);
+            }
+            left.UpdateRenderer();
+            right.UpdateRenderer();
+            UpdateRenderer();
+        }
         internal void SelectLineThin() => Selection.objects = new[] { left.gameObject, right.gameObject };
     }
     [CustomEditor(typeof(Lanelet))]
@@ -404,6 +456,10 @@ namespace Packages.MapToolbox
             if (GUILayout.Button("UpdateRenderer"))
             {
                 Target.UpdateRenderer();
+            }
+            if (GUILayout.Button(Target.loop ? "Disable Loop" : "Enable Loop"))
+            {
+                Target.ToggleLoop();
             }
         }
     }

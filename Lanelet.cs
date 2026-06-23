@@ -57,6 +57,8 @@ namespace Packages.MapToolbox
             right.Way.Ref.TryAdd(Relation);
             Relation.Members.TryAdd(left.Way);
             Relation.Members.TryAdd(right.Way);
+            left.LineRenderer.loop = loop;
+            right.LineRenderer.loop = loop;
             UpdateRenderer();
         }
         private void OnNodeMoved(Node node) => UpdateRenderer();
@@ -408,21 +410,102 @@ namespace Packages.MapToolbox
                 RemoveClosingNode(left.Way.Nodes);
                 RemoveClosingNode(right.Way.Nodes);
             }
+            left.LineRenderer.loop = loop;
+            right.LineRenderer.loop = loop;
             left.UpdateRenderer();
             right.UpdateRenderer();
             UpdateRenderer();
         }
         internal void SelectLineThin() => Selection.objects = new[] { left.gameObject, right.gameObject };
+        internal void Merge(Lanelet other)
+        {
+            Undo.RecordObject(this, "Merge Lanelet");
+            Undo.RecordObject(left, "Merge Lanelet");
+            Undo.RecordObject(right, "Merge Lanelet");
+            var otherLeftNodes = other.left.Way.Nodes;
+            var otherRightNodes = other.right.Way.Nodes;
+            var otherCenterPoints = other.CenterPoints;
+            if (otherLeftNodes.Count == 0 || otherRightNodes.Count == 0 || otherCenterPoints.Count == 0)
+                return;
+            bool append = (otherLeftNodes[0].Equals(left.Way.Nodes.Last()) || otherRightNodes[0].Equals(right.Way.Nodes.Last()));
+            bool prepend = (otherLeftNodes.Last().Equals(left.Way.Nodes[0]) || otherRightNodes.Last().Equals(right.Way.Nodes[0]));
+            if (append)
+            {
+                int leftStart = 1;
+                int rightStart = (otherRightNodes[0].Equals(right.Way.Nodes.Last())) ? 1 : 0;
+                for (int i = leftStart; i < otherLeftNodes.Count; i++)
+                {
+                    left.Way.Nodes.Add(otherLeftNodes[i]);
+                    otherLeftNodes[i].Ref.Add(left.Way);
+                }
+                for (int i = rightStart; i < otherRightNodes.Count; i++)
+                {
+                    right.Way.Nodes.Add(otherRightNodes[i]);
+                    otherRightNodes[i].Ref.Add(right.Way);
+                }
+                for (int i = leftStart; i < otherCenterPoints.Count; i++)
+                    CenterPoints.Add(otherCenterPoints[i]);
+            }
+            else if (prepend)
+            {
+                int leftEnd = otherLeftNodes.Count - 1;
+                int rightEnd = (otherRightNodes.Last().Equals(right.Way.Nodes[0])) ? otherRightNodes.Count - 1 : otherRightNodes.Count;
+                for (int i = leftEnd - 1; i >= 0; i--)
+                {
+                    left.Way.Nodes.Insert(0, otherLeftNodes[i]);
+                    otherLeftNodes[i].Ref.Add(left.Way);
+                }
+                for (int i = rightEnd - 1; i >= 0; i--)
+                {
+                    right.Way.Nodes.Insert(0, otherRightNodes[i]);
+                    otherRightNodes[i].Ref.Add(right.Way);
+                }
+                for (int i = otherCenterPoints.Count - 2; i >= 0; i--)
+                    CenterPoints.Insert(0, otherCenterPoints[i]);
+            }
+            else
+            {
+                Debug.LogWarning("[Merge] Lanelets are not connected at endpoints");
+                return;
+            }
+            left.UpdateRenderer();
+            right.UpdateRenderer();
+            UpdateRenderer();
+            if (other.left != null)
+                Undo.DestroyObjectImmediate(other.left.gameObject);
+            if (other.right != null)
+                Undo.DestroyObjectImmediate(other.right.gameObject);
+            Undo.DestroyObjectImmediate(other.gameObject);
+        }
     }
     [CustomEditor(typeof(Lanelet))]
+    [CanEditMultipleObjects]
     class LaneletEditor : Editor
     {
         Lanelet Target => target as Lanelet;
-        private void OnEnable() => Target.OnEditorEnable();
-        private void OnDisable() => Target.OnEditorDisable();
+        private void OnEnable()
+        {
+            if (targets.Length == 1)
+                Target.OnEditorEnable();
+        }
+        private void OnDisable()
+        {
+            if (targets.Length == 1)
+                Target.OnEditorDisable();
+        }
         public override void OnInspectorGUI()
         {
             base.OnInspectorGUI();
+            if (targets.Length == 2)
+            {
+                if (GUILayout.Button("Merge Lanelet"))
+                {
+                    var a = targets[0] as Lanelet;
+                    var b = targets[1] as Lanelet;
+                    a.Merge(b);
+                }
+                return;
+            }
             Tools.current = Tool.None;
             if (GUILayout.Button("Add Lanelet"))
             {

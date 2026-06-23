@@ -477,6 +477,52 @@ namespace Packages.MapToolbox
                 Undo.DestroyObjectImmediate(other.right.gameObject);
             Undo.DestroyObjectImmediate(other.gameObject);
         }
+        internal void SplitAt(Node node)
+        {
+            int idx = left.Way.Nodes.IndexOf(node);
+            if (idx < 0) idx = right.Way.Nodes.IndexOf(node);
+            if (idx <= 0 || idx >= left.Way.Nodes.Count - 1 || idx >= right.Way.Nodes.Count - 1)
+            {
+                Debug.LogWarning("[Split] Node must be an interior point, not an endpoint");
+                return;
+            }
+            Undo.RecordObject(this, "Split Lanelet");
+            Undo.RecordObject(left, "Split Lanelet");
+            Undo.RecordObject(right, "Split Lanelet");
+            var newLanelet = Lanelet2Map.AddChildGameObject<Lanelet>(Lanelet2Map.transform.ChildMapId());
+            newLanelet.gameObject.RecordUndoCreateGo();
+            newLanelet.left = LineThin.AddNew(Lanelet2Map);
+            newLanelet.right = LineThin.AddNew(Lanelet2Map);
+            newLanelet.width = width;
+            newLanelet.speed_limit = speed_limit;
+            var leftNodesToMove = left.Way.Nodes.GetRange(idx, left.Way.Nodes.Count - idx);
+            var rightNodesToMove = right.Way.Nodes.GetRange(idx, right.Way.Nodes.Count - idx);
+            var centerPointsToMove = CenterPoints.GetRange(idx, CenterPoints.Count - idx);
+            left.Way.Nodes.RemoveRange(idx, leftNodesToMove.Count);
+            right.Way.Nodes.RemoveRange(idx, rightNodesToMove.Count);
+            CenterPoints.RemoveRange(idx, centerPointsToMove.Count);
+            foreach (var n in leftNodesToMove)
+            {
+                n.Ref.Remove(left.Way);
+                n.Ref.Add(newLanelet.left.Way);
+                newLanelet.left.Way.Nodes.Add(n);
+            }
+            foreach (var n in rightNodesToMove)
+            {
+                n.Ref.Remove(right.Way);
+                n.Ref.Add(newLanelet.right.Way);
+                newLanelet.right.Way.Nodes.Add(n);
+            }
+            foreach (var p in centerPointsToMove)
+                newLanelet.CenterPoints.Add(p);
+            left.UpdateRenderer();
+            right.UpdateRenderer();
+            UpdateRenderer();
+            newLanelet.left.UpdateRenderer();
+            newLanelet.right.UpdateRenderer();
+            newLanelet.UpdateRenderer();
+            Selection.activeObject = newLanelet.gameObject;
+        }
     }
     [CustomEditor(typeof(Lanelet))]
     [CanEditMultipleObjects]
@@ -543,6 +589,16 @@ namespace Packages.MapToolbox
             if (GUILayout.Button(Target.loop ? "Disable Loop" : "Enable Loop"))
             {
                 Target.ToggleLoop();
+            }
+            if (GUILayout.Button("Split Lanelet"))
+            {
+                var node = Selection.gameObjects
+                    .Select(go => go.GetComponent<Node>())
+                    .FirstOrDefault(n => n != null && (Target.left.Way.Nodes.Contains(n) || Target.right.Way.Nodes.Contains(n)));
+                if (node != null)
+                    Target.SplitAt(node);
+                else
+                    Debug.LogWarning("[Split] Ctrl+click a node on the lanelet boundary first");
             }
         }
     }

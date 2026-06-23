@@ -176,6 +176,21 @@ namespace Packages.MapToolbox
         public override void OnInspectorGUI()
         {
             base.OnInspectorGUI();
+            if (Targets.Count == 1)
+            {
+                var lanelet = Targets[0].Ref
+                    .Select(w => w.GetComponent<LineThin>())
+                    .Where(lt => lt != null)
+                    .Select(lt => lt.Way.Ref.Select(r => r.GetComponent<Lanelet>()).FirstOrDefault(l => l != null))
+                    .FirstOrDefault(l => l != null);
+                if (lanelet != null)
+                {
+                    if (GUILayout.Button("Split Lanelet Here"))
+                    {
+                        lanelet.SplitAt(Targets[0]);
+                    }
+                }
+            }
             if (Targets.Count == 2)
             {
                 if (GUILayout.Button("Link Stop Line"))

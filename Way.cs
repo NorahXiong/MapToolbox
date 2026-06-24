@@ -244,6 +244,7 @@ namespace Packages.MapToolbox
                     var newPosition = Handles.PositionHandle(oldPosition, Quaternion.identity);
                     if (!newPosition.Equals(oldPosition))
                     {
+                        newPosition.y = Utils.GetHeight(newPosition);
                         nodes[i].Position = newPosition;
                     }
                 }

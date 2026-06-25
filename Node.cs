@@ -178,16 +178,26 @@ namespace Packages.MapToolbox
             base.OnInspectorGUI();
             if (Targets.Count == 1)
             {
-                var lanelet = Targets[0].Ref
-                    .Select(w => w.GetComponent<LineThin>())
-                    .Where(lt => lt != null)
-                    .Select(lt => lt.Way.Ref.Select(r => r.GetComponent<Lanelet>()).FirstOrDefault(l => l != null))
-                    .FirstOrDefault(l => l != null);
-                if (lanelet != null)
+                var map = Targets[0].GetComponentInParent<Lanelet2Map>();
+                var lanelets = map.GetComponentsInChildren<Lanelet>()
+                    .Where(l => l.left != null && l.right != null && l.CanSplitAt(Targets[0]))
+                    .ToList();
+                if (lanelets.Count == 1)
                 {
                     if (GUILayout.Button("Split Lanelet Here"))
                     {
-                        lanelet.SplitAt(Targets[0]);
+                        lanelets[0].SplitAt(Targets[0]);
+                    }
+                }
+                else if (lanelets.Count > 1)
+                {
+                    GUILayout.Label("Node is on shared boundary of:");
+                    foreach (var l in lanelets)
+                    {
+                        if (GUILayout.Button($"Split {l.name}"))
+                        {
+                            l.SplitAt(Targets[0]);
+                        }
                     }
                 }
             }

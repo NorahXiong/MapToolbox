@@ -477,44 +477,95 @@ namespace Packages.MapToolbox
                 Undo.DestroyObjectImmediate(other.right.gameObject);
             Undo.DestroyObjectImmediate(other.gameObject);
         }
+        internal bool CanSplitAt(Node node)
+        {
+            int idx = left.Way.Nodes.IndexOf(node);
+            if (idx < 0) idx = right.Way.Nodes.IndexOf(node);
+            return idx >= 2 && idx < left.Way.Nodes.Count - 1 && idx < right.Way.Nodes.Count - 1;
+        }
         internal void SplitAt(Node node)
         {
             int idx = left.Way.Nodes.IndexOf(node);
             if (idx < 0) idx = right.Way.Nodes.IndexOf(node);
-            if (idx <= 0 || idx >= left.Way.Nodes.Count - 1 || idx >= right.Way.Nodes.Count - 1)
+            if (idx < 2 || idx >= left.Way.Nodes.Count - 1 || idx >= right.Way.Nodes.Count - 1)
             {
-                Debug.LogWarning("[Split] Node must be an interior point, not an endpoint");
+                Debug.LogWarning("[Split] Cannot split at 1st, 2nd, or last point");
                 return;
             }
-            Undo.RecordObject(this, "Split Lanelet");
-            Undo.RecordObject(left, "Split Lanelet");
-            Undo.RecordObject(right, "Split Lanelet");
-            var newLanelet = Lanelet2Map.AddChildGameObject<Lanelet>(Lanelet2Map.transform.ChildMapId());
+            var map = Lanelet2Map;
+            var newLanelet = map.AddChildGameObject<Lanelet>(map.transform.ChildMapId());
             newLanelet.gameObject.RecordUndoCreateGo();
-            newLanelet.left = LineThin.AddNew(Lanelet2Map);
-            newLanelet.right = LineThin.AddNew(Lanelet2Map);
             newLanelet.width = width;
             newLanelet.speed_limit = speed_limit;
-            var leftNodesToMove = left.Way.Nodes.GetRange(idx, left.Way.Nodes.Count - idx);
-            var rightNodesToMove = right.Way.Nodes.GetRange(idx, right.Way.Nodes.Count - idx);
-            var centerPointsToMove = CenterPoints.GetRange(idx, CenterPoints.Count - idx);
-            left.Way.Nodes.RemoveRange(idx, leftNodesToMove.Count);
-            right.Way.Nodes.RemoveRange(idx, rightNodesToMove.Count);
-            CenterPoints.RemoveRange(idx, centerPointsToMove.Count);
-            foreach (var n in leftNodesToMove)
+            LineThin oldLeft = left;
+            LineThin oldRight = right;
+            Undo.RecordObject(this, "Split Lanelet");
+            if (oldLeft.OnlyUsedBy(Relation))
             {
-                n.Ref.Remove(left.Way);
-                n.Ref.Add(newLanelet.left.Way);
-                newLanelet.left.Way.Nodes.Add(n);
+                Undo.RecordObject(oldLeft, "Split Lanelet");
+                var nodesToMove = oldLeft.Way.Nodes.GetRange(idx, oldLeft.Way.Nodes.Count - idx);
+                oldLeft.Way.Nodes.RemoveRange(idx, nodesToMove.Count);
+                newLanelet.left = LineThin.AddNew(map);
+                foreach (var n in nodesToMove)
+                {
+                    n.Ref.Remove(oldLeft.Way);
+                    n.Ref.Add(newLanelet.left.Way);
+                    newLanelet.left.Way.Nodes.Add(n);
+                }
+                left = oldLeft;
             }
-            foreach (var n in rightNodesToMove)
+            else
             {
-                n.Ref.Remove(right.Way);
-                n.Ref.Add(newLanelet.right.Way);
-                newLanelet.right.Way.Nodes.Add(n);
+                newLanelet.left = LineThin.AddNew(map);
+                var newLeft = LineThin.AddNew(map);
+                for (int i = 0; i < idx; i++)
+                    newLeft.Way.Nodes.Add(oldLeft.Way.Nodes[i]);
+                for (int i = idx; i < oldLeft.Way.Nodes.Count; i++)
+                    newLanelet.left.Way.Nodes.Add(oldLeft.Way.Nodes[i]);
+                left = newLeft;
             }
-            foreach (var p in centerPointsToMove)
-                newLanelet.CenterPoints.Add(p);
+            if (oldRight.OnlyUsedBy(Relation))
+            {
+                Undo.RecordObject(oldRight, "Split Lanelet");
+                var nodesToMove = oldRight.Way.Nodes.GetRange(idx, oldRight.Way.Nodes.Count - idx);
+                oldRight.Way.Nodes.RemoveRange(idx, nodesToMove.Count);
+                newLanelet.right = LineThin.AddNew(map);
+                foreach (var n in nodesToMove)
+                {
+                    n.Ref.Remove(oldRight.Way);
+                    n.Ref.Add(newLanelet.right.Way);
+                    newLanelet.right.Way.Nodes.Add(n);
+                }
+                right = oldRight;
+            }
+            else
+            {
+                newLanelet.right = LineThin.AddNew(map);
+                var newRight = LineThin.AddNew(map);
+                for (int i = 0; i < idx; i++)
+                    newRight.Way.Nodes.Add(oldRight.Way.Nodes[i]);
+                for (int i = idx; i < oldRight.Way.Nodes.Count; i++)
+                    newLanelet.right.Way.Nodes.Add(oldRight.Way.Nodes[i]);
+                right = newRight;
+            }
+            left.Way.Ref.TryAdd(Relation);
+            right.Way.Ref.TryAdd(Relation);
+            Relation.Members.TryAdd(left.Way);
+            Relation.Members.TryAdd(right.Way);
+            newLanelet.left.Way.Ref.Add(newLanelet.Relation);
+            newLanelet.right.Way.Ref.Add(newLanelet.Relation);
+            newLanelet.Relation.Members.Add(newLanelet.left.Way);
+            newLanelet.Relation.Members.Add(newLanelet.right.Way);
+            if (oldLeft != left && oldLeft != newLanelet.left)
+            {
+                oldLeft.Way.Ref.Remove(Relation);
+                Relation.Members.Remove(oldLeft.Way);
+            }
+            if (oldRight != right && oldRight != newLanelet.right)
+            {
+                oldRight.Way.Ref.Remove(Relation);
+                Relation.Members.Remove(oldRight.Way);
+            }
             left.UpdateRenderer();
             right.UpdateRenderer();
             UpdateRenderer();
@@ -590,16 +641,7 @@ namespace Packages.MapToolbox
             {
                 Target.ToggleLoop();
             }
-            if (GUILayout.Button("Split Lanelet"))
-            {
-                var node = Selection.gameObjects
-                    .Select(go => go.GetComponent<Node>())
-                    .FirstOrDefault(n => n != null && (Target.left.Way.Nodes.Contains(n) || Target.right.Way.Nodes.Contains(n)));
-                if (node != null)
-                    Target.SplitAt(node);
-                else
-                    Debug.LogWarning("[Split] Ctrl+click a node on the lanelet boundary first");
-            }
+
         }
     }
 }

@@ -417,6 +417,25 @@ namespace Packages.MapToolbox
             UpdateRenderer();
         }
         internal void SelectLineThin() => Selection.objects = new[] { left.gameObject, right.gameObject };
+        internal void SelectWithMembers()
+        {
+            var list = new List<GameObject> { gameObject };
+            if (left != null)
+            {
+                list.Add(left.gameObject);
+                if (left.Way != null)
+                    foreach (var n in left.Way.Nodes)
+                        if (n != null) list.Add(n.gameObject);
+            }
+            if (right != null)
+            {
+                list.Add(right.gameObject);
+                if (right.Way != null)
+                    foreach (var n in right.Way.Nodes)
+                        if (n != null) list.Add(n.gameObject);
+            }
+            Selection.objects = list.Distinct().ToArray();
+        }
         internal void Merge(Lanelet other)
         {
             Undo.RecordObject(this, "Merge Lanelet");
@@ -611,6 +630,10 @@ namespace Packages.MapToolbox
             if (GUILayout.Button("Select Line Thin"))
             {
                 Target.SelectLineThin();
+            }
+            if (GUILayout.Button("Select With Members"))
+            {
+                Target.SelectWithMembers();
             }
             if (Target.CanDuplicateLeft)
             {

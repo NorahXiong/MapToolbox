@@ -310,6 +310,14 @@ namespace Packages.MapToolbox
             RemoveDuplicatedNodes();
             return nodes.Count;
         }
+        internal void SelectWithNodes()
+        {
+            nodes.RemoveNull();
+            var list = new List<GameObject> { gameObject };
+            foreach (var n in nodes)
+                list.Add(n.gameObject);
+            Selection.objects = list.Distinct().ToArray();
+        }
         private void RegistNode(Node node)
         {
             node.OnMoved += OnNodeMovedAction;
@@ -437,6 +445,10 @@ namespace Packages.MapToolbox
                 if (GUILayout.Button("Remove Duplicated Nodes"))
                 {
                     Target.RemoveDuplicatedNodes();
+                }
+                if (GUILayout.Button("Select With Nodes"))
+                {
+                    Target.SelectWithNodes();
                 }
             }
         }

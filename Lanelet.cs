@@ -172,6 +172,11 @@ namespace Packages.MapToolbox
                     {
                         re.drawGizmos = true;
                     }
+                    var ca = item.GetComponent<CargoArea>();
+                    if (ca)
+                    {
+                        ca.drawGizmos = true;
+                    }
                 }
             }
         }
@@ -194,6 +199,11 @@ namespace Packages.MapToolbox
                     if (re)
                     {
                         re.drawGizmos = false;
+                    }
+                    var ca = item.GetComponent<CargoArea>();
+                    if (ca)
+                    {
+                        ca.drawGizmos = false;
                     }
                 }
             }

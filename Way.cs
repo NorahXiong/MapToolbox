@@ -98,6 +98,12 @@ namespace Packages.MapToolbox
                             case "gate":
                                 gameObject.AddComponent<Gate>();
                                 break;
+                            case "vehicle_parking_area":
+                                gameObject.AddComponent<VehicleParkingArea>();
+                                break;
+                            case "operation_area":
+                                gameObject.AddComponent<OperationArea>();
+                                break;
                             case "":
                                 extermTags.Add(new Tag(tag));
                                 break;
@@ -224,6 +230,18 @@ namespace Packages.MapToolbox
                 {
                     way.AppendChild(doc.AddTag("type", "gate"));
                     way.AppendChild(doc.AddTag("height", gate.height.ToString()));
+                }
+                var vehicle_parking_area = GetComponent<VehicleParkingArea>();
+                if (vehicle_parking_area)
+                {
+                    way.AppendChild(doc.AddTag("type", "vehicle_parking_area"));
+                    way.AppendChild(doc.AddTag("area", "yes"));
+                }
+                var operation_area = GetComponent<OperationArea>();
+                if (operation_area)
+                {
+                    way.AppendChild(doc.AddTag("type", "operation_area"));
+                    way.AppendChild(doc.AddTag("area", "yes"));
                 }
                 foreach (var item in extermTags)
                 {

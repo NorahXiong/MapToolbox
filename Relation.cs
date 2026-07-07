@@ -36,6 +36,11 @@ namespace Packages.MapToolbox
                 {
                     return lanelet.Valide;
                 }
+                var cargo_area = GetComponent<CargoArea>();
+                if (cargo_area != null)
+                {
+                    return cargo_area.Valide;
+                }
                 return true;
             }
         }
@@ -59,6 +64,9 @@ namespace Packages.MapToolbox
                             case "regulatory_element":
                                 gameObject.AddComponent<RegulatoryElement>();
                                 break;
+                            case "cargo_area":
+                                gameObject.AddComponent<CargoArea>();
+                                break;
                             default:
                                 Debug.LogWarning($"Unsupported Relation type {tag.Attributes["v"].Value} on {name}");
                                 break;
@@ -75,6 +83,15 @@ namespace Packages.MapToolbox
                                 break;
                             case "gate":
                                 gameObject.GetComponent<RegulatoryElement>().subType = RegulatoryElement.SubType.gate;
+                                break;
+                            case "loading":
+                                gameObject.GetComponent<CargoArea>().subType = CargoArea.SubType.loading;
+                                break;
+                            case "unloading":
+                                gameObject.GetComponent<CargoArea>().subType = CargoArea.SubType.unloading;
+                                break;
+                            case "loading_and_unloading":
+                                gameObject.GetComponent<CargoArea>().subType = CargoArea.SubType.loading_and_unloading;
                                 break;
                             case "road":
                                 gameObject.GetComponent<Lanelet>().subType = Lanelet.SubType.road;
@@ -120,6 +137,16 @@ namespace Packages.MapToolbox
                             }
                         }
                         break;
+                    case "duration":
+                        var cargo_area = gameObject.GetComponent<CargoArea>();
+                        if (cargo_area)
+                        {
+                            if (float.TryParse(tag.Attributes["v"].Value, out float d))
+                            {
+                                cargo_area.duration = d;
+                            }
+                        }
+                        break;
                     default:
                         Debug.LogWarning($"Unsupported Relation tag {tag.Attributes["k"].Value} on {name}");
                         break;
@@ -148,6 +175,12 @@ namespace Packages.MapToolbox
                                 break;
                             case "refers":
                                 GetComponent<RegulatoryElement>().refers = way;
+                                break;
+                            case "vehicle_parking":
+                                GetComponent<CargoArea>().vehicle_parking = way.GetOrAddComponent<VehicleParkingArea>();
+                                break;
+                            case "operation":
+                                GetComponent<CargoArea>().operation = way.GetOrAddComponent<OperationArea>();
                                 break;
                             default:
                                 break;
@@ -198,6 +231,10 @@ namespace Packages.MapToolbox
                             {
                                 relation.AppendChild(doc.AddMember("relation", item.name, "regulatory_element"));
                             }
+                            else if (item.GetComponent<CargoArea>())
+                            {
+                                relation.AppendChild(doc.AddMember("relation", item.name, "cargo_area"));
+                            }
                         }
                     }
                 }
@@ -210,6 +247,24 @@ namespace Packages.MapToolbox
                         relation.AppendChild(doc.AddTag("subtype", regulatory_element.subType.ToString()));
                         relation.AppendChild(doc.AddMember("way", regulatory_element.refers.name, "refers"));
                         relation.AppendChild(doc.AddMember("way", regulatory_element.ref_line.name, "ref_line"));
+                    }
+                    else
+                    {
+                        var cargo_area = GetComponent<CargoArea>();
+                        if (cargo_area)
+                        {
+                            relation.AppendChild(doc.AddTag("type", "cargo_area"));
+                            relation.AppendChild(doc.AddTag("subtype", cargo_area.subType.ToString()));
+                            relation.AppendChild(doc.AddTag("duration", cargo_area.duration.ToString()));
+                            if (cargo_area.vehicle_parking && cargo_area.vehicle_parking.Way.Valide)
+                            {
+                                relation.AppendChild(doc.AddMember("way", cargo_area.vehicle_parking.Way.name, "vehicle_parking"));
+                            }
+                            if (cargo_area.operation && cargo_area.operation.Way.Valide)
+                            {
+                                relation.AppendChild(doc.AddMember("way", cargo_area.operation.Way.name, "operation"));
+                            }
+                        }
                     }
                 }
                 return relation;

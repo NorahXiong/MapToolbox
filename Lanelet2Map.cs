@@ -110,7 +110,7 @@ namespace Packages.MapToolbox
         internal void AddParkingSpace() => Selection.activeObject = ParkingSpace.AddNew(this);
         internal void AddPedestrianMarking() => Selection.activeObject = PedestrianMarking.AddNew(this);
         internal void AddGate() => Selection.activeObject = Gate.AddNew(this);
-        internal void AddCargoArea(CargoArea.SubType subType) => Selection.activeObject = CargoArea.AddNew(this, subType);
+        internal void AddCargoArea() => Selection.activeObject = CargoArea.AddNew(this, CargoArea.SubType.loading);
         internal void ReIndex()
         {
             for (int i = 0; i < transform.childCount; i++)
@@ -164,17 +164,9 @@ namespace Packages.MapToolbox
             {
                 (target as Lanelet2Map).AddGate();
             }
-            if (GUILayout.Button("Add LoadingArea"))
+            if (GUILayout.Button("Add CargoArea"))
             {
-                (target as Lanelet2Map).AddCargoArea(CargoArea.SubType.loading);
-            }
-            if (GUILayout.Button("Add UnloadingArea"))
-            {
-                (target as Lanelet2Map).AddCargoArea(CargoArea.SubType.unloading);
-            }
-            if (GUILayout.Button("Add LoadingAndUnloadingArea"))
-            {
-                (target as Lanelet2Map).AddCargoArea(CargoArea.SubType.loading_and_unloading);
+                (target as Lanelet2Map).AddCargoArea();
             }
             if (GUILayout.Button("ReIndex Entities"))
             {

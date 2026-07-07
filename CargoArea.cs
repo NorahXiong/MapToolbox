@@ -46,11 +46,13 @@ namespace Packages.MapToolbox
         {
             if (vehicle_parking)
             {
+                vehicle_parking.cargoArea = this;
                 vehicle_parking.Way.Ref.TryAdd(Relation);
                 Relation.Members.TryAdd(vehicle_parking.Way);
             }
             if (operation)
             {
+                operation.cargoArea = this;
                 operation.Way.Ref.TryAdd(Relation);
                 Relation.Members.TryAdd(operation.Way);
             }
@@ -63,10 +65,13 @@ namespace Packages.MapToolbox
             ret.subType = subType;
             ret.vehicle_parking = VehicleParkingArea.AddNew(map);
             ret.operation = OperationArea.AddNew(map);
+            ret.vehicle_parking.cargoArea = ret;
+            ret.operation.cargoArea = ret;
             ret.vehicle_parking.Way.Ref.Add(ret.Relation);
             ret.operation.Way.Ref.Add(ret.Relation);
             ret.Relation.Members.Add(ret.vehicle_parking.Way);
             ret.Relation.Members.Add(ret.operation.Way);
+            ret.PopulateDefaultCorners();
             ret.RefreshColors();
             return ret;
         }
@@ -116,6 +121,54 @@ namespace Packages.MapToolbox
             }
         }
         internal bool IsAttachedTo(Lanelet lanelet) => lanelet != null && lanelet.Relation.Members.Contains(Relation);
+        internal void PopulateDefaultCorners()
+        {
+            Vector3 center = Lanelet2Map != null ? Lanelet2Map.transform.position : Vector3.zero;
+            if (SceneView.lastActiveSceneView != null)
+            {
+                center = SceneView.lastActiveSceneView.pivot;
+            }
+            center.y = Utils.GetHeight(center);
+            float w = vehicle_parking.width;
+            float l = vehicle_parking.length;
+            float hl = l * 0.5f;
+            Vector3 heading = Vector3.forward;
+            Vector3 perp = Vector3.right;
+            vehicle_parking.Way.InsertNode(center + heading * (-hl) + perp * (-w), 0);
+            vehicle_parking.Way.InsertNode(center + heading * (+hl) + perp * (-w), 1);
+            vehicle_parking.Way.InsertNode(center + heading * (+hl), 2);
+            vehicle_parking.Way.InsertNode(center + heading * (-hl), 3);
+            vehicle_parking.Way.Nodes.Add(vehicle_parking.Way.Nodes.First());
+            vehicle_parking.UpdateRenderer();
+            operation.Way.InsertNode(center + heading * (-hl), 0);
+            operation.Way.InsertNode(center + heading * (+hl), 1);
+            operation.Way.InsertNode(center + heading * (+hl) + perp * (+w), 2);
+            operation.Way.InsertNode(center + heading * (-hl) + perp * (+w), 3);
+            operation.Way.Nodes.Add(operation.Way.Nodes.First());
+            operation.UpdateRenderer();
+        }
+        internal void RegenerateAll()
+        {
+            if (vehicle_parking == null || operation == null) return;
+            var vpNodes = vehicle_parking.Way.Nodes.Where(_ => _ != null).ToList();
+            if (vpNodes.Count > 1 && vpNodes.First().Equals(vpNodes.Last()))
+                vpNodes.RemoveAt(vpNodes.Count - 1);
+            if (vpNodes.Count < 4) return;
+            var opNodes = operation.Way.Nodes.Where(_ => _ != null).ToList();
+            if (opNodes.Count > 1 && opNodes.First().Equals(opNodes.Last()))
+                opNodes.RemoveAt(opNodes.Count - 1);
+            if (opNodes.Count < 4) return;
+            Vector3 sharedMid = (vpNodes[2].Position + vpNodes[3].Position) * 0.5f;
+            Vector3 heading = vpNodes[1].Position - vpNodes[0].Position;
+            heading.y = 0;
+            if (heading.sqrMagnitude < 1e-5f) return;
+            heading.Normalize();
+            Vector3 perp = Vector3.Cross(heading, Vector3.up);
+            if (perp.sqrMagnitude < 1e-5f) return;
+            perp.Normalize();
+            vehicle_parking.RegenerateFromSharedEdge(sharedMid, heading, perp);
+            operation.RegenerateFromSharedEdge(sharedMid, heading, perp);
+        }
         private void OnDrawGizmos()
         {
             if (!drawGizmos || vehicle_parking == null || vehicle_parking.Way == null)

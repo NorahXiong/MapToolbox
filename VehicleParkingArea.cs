@@ -17,6 +17,7 @@
 #endregion
 
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
 
 namespace Packages.MapToolbox
@@ -25,6 +26,10 @@ namespace Packages.MapToolbox
     public class VehicleParkingArea : WayTypeBase<VehicleParkingArea>, IAddOrRemoveTarget
     {
         public const int CornerCount = 4;
+        public float width = 2f;
+        public float length = 5f;
+        [System.NonSerialized] internal CargoArea cargoArea;
+
         protected override void Start()
         {
             base.Start();
@@ -65,6 +70,21 @@ namespace Packages.MapToolbox
             }
             LineRenderer.startColor = LineRenderer.endColor = color;
         }
+        internal void RegenerateFromSharedEdge(Vector3 sharedMid, Vector3 heading, Vector3 perp)
+        {
+            if (width > length) length = width;
+            float hw = width;
+            float hl = length * 0.5f;
+            var nodes = Way.Nodes.Where(_ => _ != null).ToList();
+            if (nodes.Count > 1 && nodes.First().Equals(nodes.Last()))
+                nodes.RemoveAt(nodes.Count - 1);
+            if (nodes.Count < 4) return;
+            nodes[0].Position = sharedMid + heading * (-hl) + perp * (-hw);
+            nodes[1].Position = sharedMid + heading * (+hl) + perp * (-hw);
+            nodes[2].Position = sharedMid + heading * (+hl);
+            nodes[3].Position = sharedMid + heading * (-hl);
+            UpdateRenderer();
+        }
         private void RemoveLoopNodesRef()
         {
             if (Way.Nodes.Count > 2 && Way.Nodes.First().Equals(Way.Nodes.Last()))
@@ -77,6 +97,29 @@ namespace Packages.MapToolbox
             if (Way.Nodes.Count > 2 && !Way.Nodes.First().Equals(Way.Nodes.Last()))
             {
                 Way.Nodes.Add(Way.Nodes.First());
+            }
+        }
+    }
+    [CustomEditor(typeof(VehicleParkingArea))]
+    class VehicleParkingAreaEditor : Editor
+    {
+        public override void OnInspectorGUI()
+        {
+            serializedObject.Update();
+            EditorGUI.BeginChangeCheck();
+            base.OnInspectorGUI();
+            if (EditorGUI.EndChangeCheck())
+            {
+                serializedObject.ApplyModifiedProperties();
+                var target = (VehicleParkingArea)this.target;
+                if (target.cargoArea != null)
+                {
+                    if (target.cargoArea.operation != null)
+                    {
+                        target.cargoArea.operation.length = target.length;
+                    }
+                    target.cargoArea.RegenerateAll();
+                }
             }
         }
     }
